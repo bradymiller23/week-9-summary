@@ -1,0 +1,37 @@
+---
+title: "week 9 notes"
+format: html
+---
+
+## Tuesday, March 14
+
+```{r}
+
+
+```
+
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+
+```
+
+
+```{r}
+
+
+```
+
+
+
+
+
+## Thursday, March 16
+
