@@ -1,16 +1,16 @@
 ---
 title: "Weekly Summary Template"
-author: "Author Name"
+author: "Brady Miller"
 title-block-banner: true
 title-block-style: default
 toc: true
-format: html
-# format: pdf
+#format: html
+format: pdf
 ---
 
 ---
 
-## Tuesday, Jan 17
+## Tuesday, March 14
 
 ::: {.callout-important}
 ## TIL
@@ -19,32 +19,154 @@ Include a _very brief_ summary of what you learnt in this class here.
 
 Today, I learnt the following concepts in class:
 
-1. Item 1
-1. Item 2
-1. Item 3
+1. More with k-fold cross validation
+1. Using caret package with cross validation
+1. Using caret package with LASSO regression
 :::
 
-Provide more concrete details here. You can also use footenotes[^footnote] if you like
-
-```{R results='hide'}
-#| output: false
+```{r}
+# opening some necessary libraries
+library(ISLR2)
 library(dplyr)
+library(tidyr)
 library(purrr)
+library(readr)
+library(glmnet)
+library(caret)
+library(car)
+library(torch)
+```
+
+```{r}
+# opening Boston data set which will be used in examples
+df <- Boston
+attach(Boston)
+```
+
+#### k-fold cross validation
+
+```{r}
+k <- 5
+folds <- sample(1:k, nrow(df), replace = T)
+
+df_folds <- list()
+
+# define list of data frame where every list has train and test
+for (i in 1:k){
+  df_folds[[i]] <- list()
+  df_folds[[i]]$train = df[which(folds == i), ]
+}
 ```
 
 
-For example: 
-in class we learnt we learnt about the `map` function from the `purrr` package. 
+```{r}
+# finding the mean squared error for each fold variation
+kfold_mspe <- c()
+for (i in 1:k) {
+  model <- lm(medv ~ ., df_folds[[i]]$train)
+  y_hat <- predict(model, df_folds[[i]]$test)
+  kfold_mspe[i] <- mean((y_hat - df_folds[[i]]$test$medv)^2)
+}
+```
 
-
-```{R results='hide', fig.width=7, fig.height=7}
-par(mfrow=c(3, 3), mar=c(3.5, 3.5, 2, 1), mgp=c(2.4, 0.8, 0))
-map(1:9, function(i)rnorm(1000) %>% hist(., main=i, col=i))
+```{r}
+make_folds <- function(df, k){
+  folds <- sample(1:k, nrow(df), replace = T)
+  df_folds <- list()
+  for (i in 1:k){
+    df_folds[[i]] <- list()
+    df_folds[[i]]$train = df[which(folds != i), ]
+    df_folds[[i]]$test = df[which(folds == i), ]
+  }
+  return(df_folds)
+}
 ```
 
 
+```{r}
+# cross validation mean squared prediction error function
+cv_mspe <- function(formula, df_folds){
+  kfold_mspe <- c()
+  # going through each fold to generate predictions and find the error for each
+  for (i in 1:length(df_folds)){
+    model <- lm(formula, df_folds[[i]]$train)
+    y_hat <- predict(model, df_folds[[i]]$test)
+    kfold_mspe <- mean((y_hat - df_folds[[i]]$test$medv)^2)
+  }
+  return(mean(kfold_mspe))
+}
+```
+* This function can then be used to find the prediction error generated for a 
+given set of variables over a certain amount of folds. This can help you 
+determine which set of variables would be best to create the least error
 
-## Thursday, Jan 19
+
+
+#### cross validation with caret package
+
+By using the caret package, we can write code to cross validate a dataset in
+much fewer lines as shown below
+
+```{r}
+# specifying you want to cross validate using 5 folds (the number)
+ctrl <- trainControl(method = 'cv', number = 5)
+ctrl
+```
+
+```{r}
+# creating model that uses linear regression model to predict med. house price
+# trControl attribute uses the ctrl object to specify 5-fold cross validation
+model <- train(medv ~ ., data = df, method = 'lm', trControl = ctrl)
+summary(model)
+```
+This model created by cross validation using the caret package indicates that 
+the age and indus variables are not significant in predicting the median house
+price of a given home. The $R^2$ value indicates that there is a somewhat strong
+positive correlation between the covariates and the outcome variable.
+
+```{r}
+# creates predictions for each piece of data in the Boston data set
+predictions <- predict(model,df)
+sample(predictions,10)
+```
+Above we show 5 randomly selected predictions made on the data set. Each row 
+number has the associated predicted median house value with it. 
+
+
+
+#### LASSO regression with caret package
+ 
+This deals with bias-variance trade off. As it states there is a trade off 
+between having more bias or more variance. By having a model that has more 
+variables, bias decreases but variance increases. Having too much variance can
+lead to overfitting data and create good performance on train data but bad 
+performance on test data. On the other hand, a model with only a few variables
+increases bias and reduces variance. Increasing bias can lead to creating a 
+model that underfits data, resulting in poor performance on both the train and 
+test data. This relates to LASSO as it is a form of variable selection, so you 
+want to make sure you are selecting the right amount of variables so you have a 
+balanced trade off between bias and variance
+
+```{r}
+ctrl <- trainControl(method = 'cv', number = 5)
+
+# Defining the tuning grid
+grid <- expand.grid(alpha = 1, lambda = seq(0, 0.1, by = 0.005))
+
+# Train the model using LASSO regression with cross validation
+lasso_fit <- train(medv ~ ., data = df, method = 'glmnet', trControl = ctrl,
+                   tuneGrid = grid, standardize = TRUE, family = 'gaussian')
+
+plot(lasso_fit)
+```
+This plot shows the mean squared error value for each regularization parameter 
+tried in the LASSO regression with the cross validation. From this, we can see 
+that the regularization parameter that minimizes the mean squared error value 
+is at about 0.03, so $\lambda$ should be 0.03 when doing LASSO regression.
+
+
+
+## Thursday, March 16
 
 
 
@@ -59,18 +181,3 @@ Today, I learnt the following concepts in class:
 1. Item 2
 1. Item 3
 :::
-
-Provide more concrete details here, e.g., 
-
-In class we learnt how to use the `map` function to create multiple regression diagnostic plots
-
-```{R results='hide', fig.height=4}
-par(mfcol=c(2, 3), mar=c(3.5, 3.5, 2, 1), mgp=c(2.4, 0.8, 0))
-mtcars %>%
-  split(.$cyl) %>%
-  map(~ lm(mpg ~ wt, data = .x)) %>%
-  map(function(x)plot(x, which=c(1, 2)))
-```
-
-
-[^footnote]: You can include some footnotes here
