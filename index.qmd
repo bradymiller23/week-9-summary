@@ -181,3 +181,163 @@ Today, I learnt the following concepts in class:
 1. Item 2
 1. Item 3
 :::
+
+
+
+#### Classification
+
+$$
+\boxed {y = \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p}
+$$
+
+Looking at different loss functions
+1. Least sqaures
+  $L(\beta) = \sum_{i=1}^n \|y_i - \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p|$
+
+1. Penalized least sqaures/LASSO 
+  $L(\beta) = \sum_{i=1}^n \|y_i - \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p||^2 + \lambda\|\beta||$
+  
+*Will move to categorical response variables and generalization of the right side using neural networks
+*Combine left and right side to make neural networks that perform classification
+
+```{r}
+url <- 'https://archive.ics.uci.edu/ml/datasets/breast+cancer+wisconsin+(diagnostic)'
+col_names <- c('id', 'diagnosis', paste0('feat', 1:30))
+df <- read_csv(
+  url, col_names, col_types = cols()
+) %>%
+  select(-id) %>%
+  mutate(outcome = ifelse('diagnosis' == 'M', 1, 0)) %>%
+  select(-diagnosis)
+```
+
+
+```r
+reg_model <- lm(diagnosis ~ ., data = df)
+```
+Most features are not significant
+
+
+```r
+n <- 100
+new_patients <- data.frame(matrix(rnomr(30 * n), nrow = n))
+colnames(new_patients) <- paste0('feat', 1:30)
+new_predictions <- predict(reg_model, newdata = new_patients, type = 'response'0)
+```
+
+```r
+print(new_predictions %>% head())
+```
+* responses are 0 or 1 (tumor is malignant or benign), but what we get from this is values that don't make sense --> can't represent probability that someones tumor is malignant
+ 
+* logistic regression would be better as logistic regression in this model can end up giving negative numbers which doesn't make sense (meaningless predictions)
+
+* linear regression for binary models will give you bad values for extrapolation
+
+
+```r
+boxplot(new_predictions)
+```
+shows that there are bad/inaccurate responses
+
+
+#### Logistic regression
+
+*odds = p/(1-p)
+
+*useful to interpret for binary responses
+
+*if p is between (0,1) then odds is between (0, infinity)
+
+*log-odds = log(odds)
+  1. log(p/(1-p))
+  1. log-odds takes values between (-infinity, infinity)
+  1. creates continuous scale which you can do linear regression on            (transforming scale so you can do linear reg, and then transforming it back to get value)
+
+* will specify a regression model and then use log-odds to get back what the probabilities are
+
+$$
+log-odds(\beta(x)) = \beta_0 + \beta_1 x_1 ->
+
+p(x) = \frac{1}{1+exp(\beta_0 + \beta_1 x_1)}
+$$
+
+*p/(1-p) = e^($\beta_0$ + $\beta_1$x$x_1$)
+* p(x) = e^($\beta_0$ + $\beta_1$x$x_1$) / (1 + e^($\beta_0$ + $\beta_1$x$x_1$))
+* p(x) = 1/( (1/e^-($\beta_0$ + $\beta_1$x$x_1$)) + 1)
+
+* want to take 
+
+
+SIGMOID FUNCTION - logistic regression
+```{r}
+sigmoid <- \(x) 1/(1+exp(-x))
+curve(sigmoid, -100, 100, ylab = 'sigmoid(x)')
+```
+
+
+p(x) = sigmoid(\beta_0 + \beta_1 x_1) = \frac{1}{1+exp(-\beta_0 - \beta_1 x_1)}
+
+
+###### Example
+
+```{r}
+set.seed(123)
+x <- rnorm(100)
+y <- rbinom(100, size = 1, prob=exp(0.5 + 0.8*x)/(1+exp(0.5 +0.8*x)))
+```
+
+```{r}
+y
+```
+
+```{r}
+model <- glm(y ~ x, family = binomial())
+summary(model)
+```
+the ground truth (model actually generating from) has intercept 0.5 and slope 0.8
+
+```{r}
+x_test <- -5.5
+sigmoid(coef(model)[1] + coef(model)[2] + x_test)
+
+predict(model, newdata = data.frame(x=x_test), type = 'response')
+```
+
+```{r}
+new_x <- seq(-2,2, by=0.1)
+p1 <- predict(model, data.frame(x=new_x))
+p2 <- predict(model, data.frame(x=new_x), type = 'response')
+
+boxplot(p1,p2)
+```
+
+Logistic regression for breast cancer data set
+```r
+df <- df %>% mutate_at('outcome', factor)
+
+model <- glm(outcome ~., data =df, family = binomial())
+summary(model)
+```
+*stuff we initially thought were insignificant are now shown to be important
+*feature 7 is not significant at all --> is actually significant, just very collinear with another variable
+* logistic regression suffers from multicollinearity 
+
+
+* There is no $R^2$ value for logistic regression as there is for linear regression --> no line fitting x to y
+* computes deviance instead (similar but different)
+* Also shows AIC
+
+
+
+###### Logistic regression using torch library
+```{r}
+X <- cbind(x)
+x_tensor <- 
+y_tensor <- 
+```
+
+* neural network module --> in module you want to construct, there is some internal building step where you specify the structure
+* first layer in linear regression layer (input and output layer) (x and y are 1-dimensional)
+*can use module whenever you want to
+*an appropriate loss function would be
