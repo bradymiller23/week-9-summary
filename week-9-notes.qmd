@@ -5,33 +5,124 @@ format: html
 
 ## Tuesday, March 14
 
+$$
+\boxed {y = \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p}
+$$
+
+Looking at different loss functions
+1. Least sqaures
+  $L(\beta) = \sum_{i=1}^n \|y_i - \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p|$
+
+1. Penalized least sqaures/LASSO 
+  $L(\beta) = \sum_{i=1}^n \|y_i - \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p||^2 + \lambda\|\beta||$
+  
+*Will move to categorical response variables and generalization of the right side using neural networks
+*Combine left and right side to make neural networks that perform classification
+
+
+
+
+
+###### Example of logistic regression
+
 ```{r}
-
-
+set.seed(123)
+x <- rnorm(100)
+y <- rbinom(100, size = 1, prob=exp(0.5 + 0.8*x)/(1+exp(0.5 +0.8*x)))
 ```
 
 
 ```{r}
+model <- glm(y ~ x, family = binomial())
+summary(model)
+```
+The ground truth (model actually generating from) has intercept 0.5 and slope 0.8
 
+```{r}
+x_test <- -5.5
+sigmoid(coef(model)[1] + coef(model)[2] + x_test)
 
+predict(model, newdata = data.frame(x=x_test), type = 'response')
 ```
 
+```{r}
+new_x <- seq(-2,2, by=0.1)
+p1 <- predict(model, data.frame(x=new_x))
+p2 <- predict(model, data.frame(x=new_x), type = 'response')
+
+boxplot(p1,p2)
+```
+
+
+
+#### Logistic regression using torch library
+```{r}
+X <- cbind(x)
+x_tensor <- torch_tensor(X, dtype = torch_float())
+y_tensor <- torch_tensor(y, dtype = torch_float())
+```
+
+```{r}
+module <- nn_module(
+  'logisti_regression',
+  initialize = function() {
+    self$fc1 <- nn_linear(1,1)
+    self$fc2 <- nn_sigmoid()
+  },
+  forward = function(x) {
+    x %>%
+      self$fc1() %>%
+      self$fc2()
+  }
+)
+```
+
+```{r}
+logistic_reg <- module()
+```
+
+```{r}
+y_pred <- logistic_reg(x_tensor)
+y_pred %>% head()
+```
+
+
+* neural network module --> in module you want to construct, there is some internal building step where you specify the structure
+* first layer in linear regression layer (input and output layer) (x and y are 1-dimensional)
+*can use module whenever you want to
+
+An appropriate loss function would be...
+```{r}
+L <- function(x,y,model){
+  y_pred <- model(x)
+  return(mean((y_pred - y)^2))
+}
+```
 
 
 ```{r}
-
-
+logistic_reg_1 <- module()
+L(x_tensor, y_tensor, logistic_reg)
 ```
 
+###### Optimization
 
 ```{r}
+optimizer <- optim_adam(logistic_reg_1$parameters, lr=0.0001)
 
+epochs <- 10000
+for (i in 1:epochs){
+  loss <- L(x_tensor, y_tensor, logistic_reg_1)
+  optimizer$zero_grad()
+  loss$backward()
+  optimizer$step()
+  
+  if (i %% 1000 == 0) {
+    cat(sprintf('Epoch: %d, Loss: %.6f\n', i, loss$item()))
+  }
+}
 
 ```
-
-
-
-
-
-## Thursday, March 16
+This function generates the loss value every 1000 epochs to show how the loss 
+value decreases as the number of epochs increases.
 
