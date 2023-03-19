@@ -234,7 +234,7 @@ The range of values going negative shows that there are bad/inaccurate responses
 
 
 
-#### Logistic regression
+#### Logistic regression using sigmoid function
 
 *odds = p/(1-p)
 
@@ -256,15 +256,14 @@ $$
 \frac{p}{1-p} = exp(\beta_0 + \beta_1 x_1)
 $$
 $$
-logodds(\beta(x)) = \beta_0 + \beta_1 x_1
+LogOdds(\beta(x)) = \beta_0 + \beta_1 x_1
 $$
 
 $$
-p(x) =  \frac{e^(\beta_0 + \beta_1 x_1)}{1+exp(\beta_0 + \beta_1 x_1)} ->
-\frac{1}{1+exp(\beta_0 + \beta_1 x_1)}
+p(x) =  \frac{exp(\beta_0 + \beta_1 x_1)}{1+exp(\beta_0 + \beta_1 x_1)} = \frac{1}{1+exp(\beta_0 + \beta_1 x_1)}
 $$
 
-SIGMOID FUNCTION - logistic regression
+sigmoid function - logistic regression
 ```{r}
 sigmoid <- \(x) 1/(1+exp(-x))
 curve(sigmoid, -100, 100, ylab = 'sigmoid(x)')
@@ -274,7 +273,7 @@ $$
 p(x) = sigmoid(\beta_0 + \beta_1 x_1) = \frac{1}{1+exp(-\beta_0 - \beta_1 x_1)}
 $$
 
-###### Logistic regression for breast cancer data set
+#### Interpreting Logistic Regression for Breast Cancer Data Set
 ```{r}
 df <- df %>% mutate_at('outcome', factor)
 
